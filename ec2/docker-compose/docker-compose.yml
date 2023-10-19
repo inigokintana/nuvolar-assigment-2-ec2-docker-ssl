@@ -1,0 +1,116 @@
+version: "3"
+
+networks:
+  traefik:
+    external: true
+  internal:
+    external: false
+services:
+  traefik:
+    image: "traefik:v2.2.1"
+    container_name: traefik
+    hostname: traefik
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker
+      - --providers.docker.exposedByDefault=false
+      - --api
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_SSLEMAIL?Variable not set}
+      - --certificatesresolvers.le.acme.storage=./acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8888:8888"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
+    labels:
+      - "traefik.enable=true"
+      # Dashboard
+      - "traefik.http.routers.traefik.rule=Host(`dashboard.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certresolver=le"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.middlewares=authtraefik"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=devAdmin:$2y$05$h9OxLeY20/5uiXjfPgdRxuFlrfqBf2QifYDgrwsR6rAEgX3/dpOGq" # user:devAdmin, password:devto
+      # global redirect to https
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    restart: unless-stopped
+    networks:
+      - traefik
+ 
+  my-app:
+    image: containous/whoami:v1.3.0
+    hostname: whoami
+    container_name: whoami
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.my-app.rule=Host(`whoami.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.my-app.middlewares=auth"
+      - "traefik.http.routers.my-app.entrypoints=websecure"
+      - "traefik.http.routers.my-app.tls=true"
+      - "traefik.http.routers.my-app.tls.certresolver=le"
+      - "traefik.http.middlewares.auth.basicauth.users=devAdmin:$2y$05$h9OxLeY20/5uiXjfPgdRxuFlrfqBf2QifYDgrwsR6rAEgX3/dpOGq" # user:devAdmin, password:devto
+    networks:
+      - traefik
+  
+  service-api:
+    image: nuvolar/api-gateway
+    hostname: api-gateway
+    container_name: api-gateway
+    #environment:
+      - ORDER_SERVICE_URL=order-service
+    ports:
+      - "8080:8080"
+    comand:
+      #- docker run -p 8080:8080 -t nuvolar/api-gateway -e ORDER_SERVICE_URL=XXXX
+    labels:
+      - traefik.http.routers.blog.rule=Host(`blog.your_domain`) #- SERVER_URL=http://service-b:8080/myserver
+      - traefik.http.routers.blog.tls=true
+      - traefik.http.routers.blog.tls.certresolver=lets-encrypt
+      - traefik.port=80 # or 8080
+    networks:
+      - internal
+      - traefik
+    depends_on:
+      - order-api
+
+  order-api:
+    image: nuvolar/order-service
+    hostname: order-service
+    container_name: order-service
+    ports:
+      - "8081:8080"
+    environment:
+      - CUSTOMER_SERVICE_URL = customer-service
+    #command:
+      #- docker run -p 8081:8080 --name order-service -e CUSTOMER_SERVICE_URL=XXXXX -t nuvolar/order-service
+    networks:
+      - internal
+    labels:
+      - traefik.enable=false
+    depends_on:
+      - customer-service
+
+  customer-service:
+    image: nuvolar/customer-service
+    hostname: customer-service
+    container_name: customer-service
+    ports:
+      - "8082:8080"
+    #command:
+      #- docker run -p 8082:8080 --name customer-service -t nuvolar/customer-service
+    labels:
+      - traefik.enable=false
+    networks:
+      - internal
+
+    
