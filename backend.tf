@@ -4,6 +4,6 @@ terraform {
     region  = "eu-west-1"
     profile = "default"
     key     = "environment"
-    bucket  = "tf-eks-iqz"
+    bucket  = "tf-eks-iqz" # change it on your onw run
   }
 }

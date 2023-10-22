@@ -1,3 +1,9 @@
+variable "ec2_ami_id" {
+  type = string
+  # ask permission to access this private image on 733109890878 account id in eu-west-1
+}
+
+
 variable "ec2_vm_name" {
   type    = string
 }

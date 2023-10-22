@@ -22,6 +22,7 @@ module "vpc" {
 
 module "ec2" {
   source = "./ec2"
+  ec2_ami_id = var.ec2_ami_id
   ec2_vm_name = var.ec2_vm_name
   ec2_fqdn = var.ec2_fqdn
   ec2_user_public_rsa = var.ec2_user_public_rsa

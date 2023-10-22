@@ -1,10 +1,4 @@
-version: "3"
-
-networks:
-  traefik:
-    external: true
-  internal:
-    external: false
+version: "3.3"
 services:
   traefik:
     image: "traefik:v2.2.1"
@@ -22,7 +16,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8888:8888"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./acme.json:/acme.json"
@@ -35,7 +28,8 @@ services:
       - "traefik.http.routers.traefik.tls.certresolver=le"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.middlewares=authtraefik"
-      - "traefik.http.middlewares.authtraefik.basicauth.users=devAdmin:$2y$05$h9OxLeY20/5uiXjfPgdRxuFlrfqBf2QifYDgrwsR6rAEgX3/dpOGq" # user:devAdmin, password:devto
+      # user:devAdmin, password:devto
+      - "traefik.http.middlewares.authtraefik.basicauth.users=devAdmin:$$2y$$05$$h9OxLeY20/5uiXjfPgdRxuFlrfqBf2QifYDgrwsR6rAEgX3/dpOGq" 
       # global redirect to https
       - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
       - "traefik.http.routers.http-catchall.entrypoints=web"
@@ -45,40 +39,31 @@ services:
     restart: unless-stopped
     networks:
       - traefik
- 
-  my-app:
-    image: containous/whoami:v1.3.0
-    hostname: whoami
-    container_name: whoami
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.my-app.rule=Host(`whoami.${PRIMARY_DOMAIN}`)"
-      - "traefik.http.routers.my-app.middlewares=auth"
-      - "traefik.http.routers.my-app.entrypoints=websecure"
-      - "traefik.http.routers.my-app.tls=true"
-      - "traefik.http.routers.my-app.tls.certresolver=le"
-      - "traefik.http.middlewares.auth.basicauth.users=devAdmin:$2y$05$h9OxLeY20/5uiXjfPgdRxuFlrfqBf2QifYDgrwsR6rAEgX3/dpOGq" # user:devAdmin, password:devto
-    networks:
-      - traefik
-  
-  service-api:
+  api-gateway:
     image: nuvolar/api-gateway
     hostname: api-gateway
     container_name: api-gateway
-    #environment:
-      - ORDER_SERVICE_URL=order-service
+    environment:
+            - ORDER_SERVICE_URL=http://order-api:8080
     ports:
-      - "8080:8080"
-    comand:
+     - "8080:8080"
+    #comand:
       #- docker run -p 8080:8080 -t nuvolar/api-gateway -e ORDER_SERVICE_URL=XXXX
     labels:
-      - traefik.http.routers.blog.rule=Host(`blog.your_domain`) #- SERVER_URL=http://service-b:8080/myserver
-      - traefik.http.routers.blog.tls=true
-      - traefik.http.routers.blog.tls.certresolver=lets-encrypt
-      - traefik.port=80 # or 8080
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.api-gateway.rule=Host(`api-gateway.${PRIMARY_DOMAIN}`)"
+      - "traefik.http.routers.api-gateway.tls=true"
+      - "traefik.http.routers.api-gateway.tls.certresolver=le"
+      - "traefik.http.services.api-gateway.loadbalancer.server.port=8080"
+      # global redirect to https
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    restart: unless-stopped
     networks:
-      - internal
       - traefik
     depends_on:
       - order-api
@@ -90,13 +75,14 @@ services:
     ports:
       - "8081:8080"
     environment:
-      - CUSTOMER_SERVICE_URL = customer-service
+      - CUSTOMER_SERVICE_URL=http://customer-service:8080
     #command:
       #- docker run -p 8081:8080 --name order-service -e CUSTOMER_SERVICE_URL=XXXXX -t nuvolar/order-service
     networks:
-      - internal
+      - traefik
     labels:
-      - traefik.enable=false
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
     depends_on:
       - customer-service
 
@@ -109,8 +95,11 @@ services:
     #command:
       #- docker run -p 8082:8080 --name customer-service -t nuvolar/customer-service
     labels:
-      - traefik.enable=false
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
     networks:
-      - internal
+      - traefik
 
-    
+networks:
+  traefik:
+    external: true
