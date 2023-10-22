@@ -31,3 +31,56 @@ module "ec2" {
   ec2_subnet_id = module.vpc.public_subnets[0] # setting the VM in pubic subnet
   depends_on = [module.vpc.vpc_id]
 }
+
+################################################
+# 3 -  Default SG in VPC adding ingress/egress (For simplicity) 
+#           This is a bad practice
+#           Better to create a separate SG for the VM
+#  Ingress: ssh, http, httpS
+#  Egress: outbound traffic
+################################################
+
+data "aws_security_group" "selected" {
+  vpc_id = [module.vpc.vpc_id]
+
+  filter {
+    name   = "group-name"
+    values = ["default"]
+  }
+}
+
+resource "aws_security_group_rule" "http" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "http"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = data.aws_security_group.selected.id
+}
+
+resource "aws_security_group_rule" "https" {
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "https"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = data.aws_security_group.selected.id
+}
+
+resource "aws_security_group_rule" "ssh" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "ssh"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = data.aws_security_group.selected.id
+}
+
+resource "aws_security_group_rule" "www" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = data.aws_security_group.selected.id
+}

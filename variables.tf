@@ -52,8 +52,8 @@ variable "vpc_nat_gateway"{
 ################################################################################
 variable "ec2_ami_id" {
   type = string
-  # ask permission to access this private image on 733109890878 account id in eu-west-1
-  default = "ami-0338e6ca1aba01dc4" 
+  #  please send me your AWS account id to share access  to this private image on  my AWS 733109890878 account id in eu-west-1
+  default = "ami-02612f41537049892" 
 }
 
 variable "ec2_vm_name" {

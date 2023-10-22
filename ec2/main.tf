@@ -40,9 +40,10 @@ module "ec2" {
 sudo apt-get update -y
 # # set FQDN  <- var.ec2_vm_name+var.ec2_fqdn
 echo "Changing Hostname"
-sed -e "${var.ec2_vm_name}"."${var.ec2_fqdn}" /etc/hostname
-sudo hostname -F /etc/hostname
-# ssh RSA public from selected user <-- ec2_user_public_rsa
+#sed -e "${var.ec2_vm_name}"."${var.ec2_fqdn}" /etc/hostname
+#sudo hostname -F /etc/hostname
+sudo hostnamectl set-hostname ${var.ec2_vm_name}.${var.ec2_fqdn}
+# ssh RSA public from selected users <-- ec2_user_public_rsa
 echo "${var.ec2_user_public_rsa}" >> /home/ubuntu/.ssh/authorized_keys
 EOF
   tags = {
