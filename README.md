@@ -29,7 +29,7 @@ Update the `backend.tf` and update the s3 bucket name and the region of your s3 
 Update the `variables.tf`:
 - profile if you are not using the default profile
 - region if not using AWS Ireland region eu-west-1
-- ami-id: "ami-0338e6ca1aba01dc4" - please send me your AWS account id to share access  to this private image on  my AWS 733109890878 account id in eu-west-1
+- ami-id: "ami-02612f41537049892" - please send me your AWS account id to share access  to this private image on  my AWS 733109890878 account id in eu-west-1
 - ec2_key_name to add your selected Key pairs to access via ssh to the new provisioned EC2 VM - Must have "tag:Component" with "terraform" value so the Terraform can find it
 - ec2_user_public_rsa so you can set copy public rsa to access via ssh inside the new provisioned EC2 VM to another selected user
 ```
