@@ -9,7 +9,7 @@ In fact, we are taking the easiest approach proposed in this [document](https://
  - Terraform script provisioning AWS VPC and AWS EC2 VM with SSD disk, ubuntu 20.04 LTS, VM must have a public ip.
  - VM AMI where docker environment is already configured and we use Docker Compose to configure Traefik + 3 Nuvolar microservices mentioned above in the assigment.
  - We use Traefik built-in self-signed certificate. Traefik will route the traffic to service-api microservervice
-- In the Docker environment 1 docker network is created external(traefik) and internal.
+- In the Docker environment 1 docker network is created external(traefik)
 - Traefik service will sit on traefik external network
 - Nuvolar api-gateway microservice will sit on extenal traefik network so that it can take traffick coming from traefik SSL termination and redirect to customer-service and order-api microservices
 
