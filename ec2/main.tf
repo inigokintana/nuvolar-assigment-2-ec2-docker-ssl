@@ -8,16 +8,6 @@ data "aws_key_pair" "tf" {
   }
 }
 
-# get ubuntu 20.04 for AMD 
-data "aws_ami_ids" "ubuntu" {
-  owners = ["aws-marketplace"]
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/ubuntu-20-04-amd64-server-*"]
-  }
-}
-
 ############
 # ec2 module
 ############
@@ -30,7 +20,7 @@ module "ec2" {
   key_name               =  data.aws_key_pair.tf.key_name # got above
   monitoring             = false
   associate_public_ip_address = true
-  ami                    = var.ec2_ami_id # ask acces to this private AMI
+  ami                    = var.ec2_ami_id # ask access to this private AMI
   subnet_id              = var.ec2_subnet_id
 
   #user_data = "${file("vm_docker_config.sh")}"

@@ -33,54 +33,87 @@ module "ec2" {
 }
 
 ################################################
-# 3 -  Default SG in VPC adding ingress/egress (For simplicity) 
-#           This is a bad practice
-#           Better to create a separate SG for the VM
+# 3 -  SG in VPC adding ingress/egress  - creating separate SG for the VM
 #  Ingress: ssh, http, httpS
-#  Egress: outbound traffic
+#  Egress: outbound traffic to all WWW
 ################################################
 
-data "aws_security_group" "selected" {
-  vpc_id = [module.vpc.vpc_id]
 
-  filter {
-    name   = "group-name"
-    values = ["default"]
-  }
+module "web_server_sg_http" {
+  source = "terraform-aws-modules/security-group/aws//modules/http-80"
+
+  name        = "web-server-http"
+  description = "Security group for web-server with HTTP ports open within VPC"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_cidr_blocks = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "http" {
-  type              = "ingress"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "http"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = data.aws_security_group.selected.id
+module "web_server_sg_https" {
+  source = "terraform-aws-modules/security-group/aws//modules/https-443"
+
+  name        = "web-server-https"
+  description = "Security group for web-server with HTTPS ports open within VPC"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_cidr_blocks = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "https" {
-  type              = "ingress"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "https"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = data.aws_security_group.selected.id
+module "vote_service_sg_ingress" {
+  source = "terraform-aws-modules/security-group/aws"
+
+  name        = "custom-rules_ingress"
+  description = "Security group for user-service with SSH ports open within VPC, and PostgreSQL publicly open"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      description = "User-service ports-ssh"
+      cidr_blocks = "0.0.0.0/0"
+    },
+  ]
 }
 
-resource "aws_security_group_rule" "ssh" {
-  type              = "ingress"
-  from_port         = 22
-  to_port           = 22
-  protocol          = "ssh"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = data.aws_security_group.selected.id
+module "vote_service_sg_egress" {
+  source = "terraform-aws-modules/security-group/aws"
+
+  name        = "custom-rules_egress"
+  description = "Security group for user-service with OUTBOUND www open within VPC, and PostgreSQL publicly open"
+  vpc_id      = module.vpc.vpc_id
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      description = "outbound - User-service ports (ipv4)"
+      cidr_blocks = "0.0.0.0/0"
+    },
+  ]
 }
 
-resource "aws_security_group_rule" "www" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = data.aws_security_group.selected.id
+data "aws_instance" "instance" {
+  instance_id = module.ec2.ec2_instance_id
+}
+
+resource "aws_network_interface_sg_attachment" "sg_attachment_http" {
+  security_group_id    = module.web_server_sg_http.security_group_id
+  network_interface_id = data.aws_instance.instance.network_interface_id
+}
+
+resource "aws_network_interface_sg_attachment" "sg_attachment_https" {
+  security_group_id    = module.web_server_sg_https.security_group_id
+  network_interface_id = data.aws_instance.instance.network_interface_id
+}
+
+resource "aws_network_interface_sg_attachment" "sg_attachment_ssh" {
+  security_group_id    = module.vote_service_sg_ingress.security_group_id
+  network_interface_id = data.aws_instance.instance.network_interface_id
+}
+
+resource "aws_network_interface_sg_attachment" "sg_attachment_www_egress" {
+  security_group_id    = module.vote_service_sg_egress.security_group_id
+  network_interface_id = data.aws_instance.instance.network_interface_id
 }

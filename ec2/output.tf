@@ -6,3 +6,8 @@ output "ec2_vm_public_ip" {
   value       = "${module.ec2.public_ip}"
   description = "PublicIP address details"
 }
+
+output "ec2_instance_id" {
+  value       = "${module.ec2.id}"
+  description = "Instance ID"
+}

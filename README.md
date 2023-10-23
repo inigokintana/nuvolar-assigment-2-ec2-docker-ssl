@@ -40,6 +40,8 @@ Update the `variables.tf`:
 - Run the plan command to see all the resources that will be created: terraform plan
 
 - Run the apply command to create the resources: terraform apply
+
+- To destroy resources: terraform destroy
 ```
 If you get errors deleting the resources, remove the .terraform folder and destroy again.
 ```
